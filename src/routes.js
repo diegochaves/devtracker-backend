@@ -8,32 +8,27 @@ routes.get('/', (request, response) => {
     return response.json({message: 'Hello World!'})
 })
 
-routes.post('/dev', (request, response) => {
-    console.log(request.body)
+routes.post('/dev', async (request, response) => {
     const {github_username, techs, latitude, longitude} = request.body
+    const githubApiResponse = await axios.get(`https://api.github.com/users/${github_username}`)
+    const {name = login, avatar_url, bio} = githubApiResponse.data
     const techsArray = techs.split(',').map(tech => tech.trim())
     const location = {
         type: 'Point',
         coordinates: [longitude, latitude]
     }
+    const devData = {
+        github_username,
+        name,
+        avatar_url,
+        bio,
+        techs: techsArray,
+        location
+    }
 
-    axios.get(`https://api.github.com/users/${github_username}`)
-        .then(({data}) => {
-            const {name = login, avatar_url, bio} = data
-            const devData = {
-                github_username,
-                name,
-                avatar_url,
-                bio,
-                techs: techsArray,
-            }
-            Dev.create(devData).then(response => 
-                console.log(response))
-        })
-        .catch(error => {
-            console.log(error)
-        })
-    return response.json({ message: 'ok!'})
+    const dev = await Dev.create(devData)
+
+    return response.json(dev)
 })
 
 module.exports = routes
